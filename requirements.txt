@@ -1,0 +1,14 @@
+aiohttp==3.7.3; python_version >= "3.6" and python_full_version >= "3.5.3"
+async-timeout==3.0.1; python_version >= "3.6" and python_full_version >= "3.5.3"
+attrs==20.3.0; python_version >= "3.6" and python_full_version >= "3.5.3"
+chardet==3.0.4; python_version >= "3.6" and python_full_version >= "3.5.3"
+discord.py==1.6.0; python_full_version >= "3.5.3"
+dynaconf==3.1.2
+idna==3.1; python_version >= "3.6" and python_full_version >= "3.5.3"
+multidict==5.1.0; python_version >= "3.6" and python_full_version >= "3.5.3"
+pendulum==2.1.2; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.5.0")
+python-dateutil==2.8.1; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
+pytzdata==2020.1; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
+six==1.15.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
+typing-extensions==3.7.4.3; python_version >= "3.6" and python_full_version >= "3.5.3"
+yarl==1.6.3; python_version >= "3.6" and python_full_version >= "3.5.3"

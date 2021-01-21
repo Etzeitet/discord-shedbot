@@ -1,0 +1,10 @@
+[default]
+bot_datastore_channel = "bot-data"
+bot_listen_channel = "are-we-on-tonight"
+
+
+[development]
+bot_guild = "Etzeitet's Test Server"
+
+[production]
+bot_guild = "Etzeitet"
