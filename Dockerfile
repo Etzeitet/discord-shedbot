@@ -8,6 +8,4 @@ COPY setup.py .
 COPY shedbot/ ./shedbot
 RUN pip install .
 
-ENV ENV_FOR_DYNACONF development
-
 CMD ["python", "shedbot/main.py"]

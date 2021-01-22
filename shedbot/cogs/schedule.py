@@ -74,6 +74,7 @@ class Schedule(commands.Cog):
         self.schedule: Dict[discord.Member, str] = {}
 
         self.settings = settings
+        self.last_day = pendulum.now(tz="Europe/London").day
 
         self.guild = None
         self.datastore_channel = None
@@ -263,6 +264,7 @@ class Schedule(commands.Cog):
         """
         Clears the schedule and store in Guild/Server.
         """
+        log.info("Clearing schedule")
         self.schedule = {}
         await self.store_schedule()
 
@@ -345,13 +347,16 @@ class Schedule(commands.Cog):
     @tasks.loop(seconds=60)
     async def schedule_manager(self):
         now = pendulum.now(tz="Europe/London")
-        clear_time = pendulum.today(tz="Europe/London").end_of("day")
 
-        if now > clear_time:
-            print("schedule_manager: end of day clearing")
+        log.debug(f"now: {now}")
+        log.debug(f"clear: {self.last_day}")
+
+        if now.day != self.last_day:
+            log.info("schedule_manager: end of day clearing")
             await self.clear_schedule()
-
-        print("schedule_manager: nothing to do")
+            self.last_day = now.day
+        else:
+            log.info("schedule_manager: nothing to do")
 
     @schedule_manager.before_loop
     async def before_printer(self):
