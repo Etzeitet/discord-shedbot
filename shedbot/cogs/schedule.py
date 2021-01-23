@@ -1,7 +1,7 @@
 import json
 import logging
 from json.decoder import JSONDecodeError
-from typing import Dict
+from typing import Dict, Union
 
 import discord
 import pendulum
@@ -12,6 +12,36 @@ from shedbot.config.config import settings
 
 log = logging.getLogger("shedbot.schedule-cog")
 log.setLevel(logging.DEBUG)
+
+ScheduleDict = Dict[discord.Member, Union[str, pendulum.DateTime]]
+
+
+def json_default(o):
+    """
+    Encoder for pendulum DateTime
+    """
+    if isinstance(o, pendulum.DateTime):
+        return str(o)
+    else:
+        return o
+
+
+def json_object_hook(o):
+    """
+    Decoder for pendulum DateTime
+    """
+    d = {}
+    for k, v in o.items():
+        if k == "value":
+            try:
+                v = pendulum.parse(v)
+                v.set(tz="Europ/London")
+            except pendulum.parsing.exceptions.ParserError:
+                pass
+
+        d[k] = v
+
+    return d
 
 
 def is_guild_owner(**perms):
@@ -71,7 +101,7 @@ class Schedule(commands.Cog):
         log.debug("Initialising Schedule Cog")
 
         self.bot = bot
-        self.schedule: Dict[discord.Member, str] = {}
+        self.schedule: ScheduleDict = {}
 
         self.settings = settings
         self.last_day = pendulum.now(tz="Europe/London").day
@@ -112,16 +142,23 @@ class Schedule(commands.Cog):
         if not self.schedule:
             return "No one appears to be on tonight! :("
 
-        message = "On tonight:\n\n"
+        message = "On tonight:\n\n```"
         for member, online in self.schedule.items():
             log.debug(f"{member=}")
 
             if member:
                 name = member.display_name  # getattr(member, "nick", member.name)
-                icon = online_icons.get(online, online_icons["dunno"])
-                message += f"{name}: {icon}\n"
 
-        return message
+                if isinstance(online, pendulum.DateTime):
+                    start_time = online.format("HH:mm")
+                    status = f"{online_icons['yes']} ({start_time})"
+                else:
+                    icon = online_icons.get(online, online_icons["dunno"])
+                    status = icon
+
+                message += f"{name+':':<15} {status}\n"
+
+        return f"{message}\n```"
 
     def to_json(self, data):
         """
@@ -144,7 +181,7 @@ class Schedule(commands.Cog):
         schedule = {k.id: v for k, v in data.items()}
 
         try:
-            text = json.dumps(schedule)
+            text = json.dumps(schedule, default=json_default)
         except (TypeError, OverflowError):
             text = None
 
@@ -172,7 +209,7 @@ class Schedule(commands.Cog):
         log.debug(f"deserialising from JSON: {text}")
 
         try:
-            data = self.hydrate_members(json.loads(text))
+            data = self.hydrate_members(json.loads(text, object_hook=json_object_hook))
         except JSONDecodeError:
             data = None
 
@@ -238,7 +275,9 @@ class Schedule(commands.Cog):
             if data := self.from_json(content):
                 self.schedule = data
 
-    async def update_schedule(self, member: discord.Member, value: str) -> None:
+    async def update_schedule(
+        self, member: discord.Member, value: Union[str, pendulum.DateTime]
+    ) -> None:
         """
         Update the schedule and store in Guild/Server.
 
@@ -248,7 +287,7 @@ class Schedule(commands.Cog):
             Member or User instance, the user to be updated
 
         value:
-            The value to assign to the user. Any str. If
+            The value to assign to the user. Any str or DateTime. If
             value is CLEAR, removes member from schedule.
         """
         log.debug(f"update_schedule: {member.name} set to {value}")
@@ -303,6 +342,16 @@ class Schedule(commands.Cog):
         await self.update_schedule(member, "yes")
         await ctx.send(
             f"Hi {member.display_name}. You've set yourself as on tonight :sunglasses:"
+        )
+
+    @tonight.command()
+    async def at(self, ctx, time):
+        start_time = pendulum.parse(time, tz="Europe/London")
+        member = self.guild.get_member(ctx.author.id)
+        await self.update_schedule(member, start_time)
+        await ctx.send(
+            (f"Hi {member.display_name}. "
+             f"You've set yourself as on tonight at {time} :sunglasses:")
         )
 
     @tonight.command(aliases=["nope", "n", "nah"])
