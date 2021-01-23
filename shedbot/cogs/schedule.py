@@ -32,12 +32,13 @@ def json_object_hook(o):
     """
     d = {}
     for k, v in o.items():
-        if k == "value":
+        if len(v) > 10:
             try:
                 v = pendulum.parse(v)
-                v.set(tz="Europ/London")
-            except pendulum.parsing.exceptions.ParserError:
-                pass
+                v.set(tz="Europe/London")
+                log.debug(f"json_object_hook: {v}")
+            except pendulum.parsing.exceptions.ParserError as e:
+                log.exception(e)
 
         d[k] = v
 
@@ -58,6 +59,22 @@ def is_guild_owner(**perms):
         return ctx.guild.owner_id == ctx.author.id
 
     return commands.check(predicate)
+
+
+def is_owner_or_admin_role(**perms):
+    if hasattr(settings, "bot_admin_role"):
+        role = settings.bot_admin_role
+    else:
+        role = "none"
+
+    original = commands.has_role(role).predicate
+
+    async def extended_check(ctx):
+        if ctx.guild is None:
+            return False
+
+        return ctx.guild.owner_id == ctx.author.id or await original(ctx)
+    return commands.check(extended_check)
 
 
 def is_tonight_channel(**perms):
@@ -325,12 +342,15 @@ class Schedule(commands.Cog):
         await ctx.send(self.format_schedule())
 
     @tonight.command(hidden=True)
-    @is_guild_owner()
+    # @commands.check_any(is_guild_owner(), has_role(settings.bot_admin_role))
+    @is_owner_or_admin_role()
+    @is_tonight_channel()
     async def clearall(self, ctx):
         await self.clear_schedule()
         await ctx.send("Schedule has been cleared!")
 
     @tonight.command(aliases=["yep", "y", "ok"])
+    @is_tonight_channel()
     async def yes(self, ctx):
         """
         Sets your status as being online tonight.
@@ -345,6 +365,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command()
+    @is_tonight_channel()
     async def at(self, ctx, time):
         start_time = pendulum.parse(time, tz="Europe/London")
         member = self.guild.get_member(ctx.author.id)
@@ -355,6 +376,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["nope", "n", "nah"])
+    @is_tonight_channel()
     async def no(self, ctx):
         """
         Sets your status as not being online tonight.
@@ -369,6 +391,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["eh", "meh", "maybe"])
+    @is_tonight_channel()
     async def dunno(self, ctx):
         """
         Sets your status as dunno. You are undecided!
@@ -383,6 +406,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["delete", "nuke"])
+    @is_tonight_channel()
     async def clear(self, ctx):
         """
         Clears any status.
