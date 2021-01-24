@@ -6,18 +6,14 @@ settings = Dynaconf(
     environments=True
 )
 
-# `envvar_prefix` = export envvars with `export DYNACONF_FOO=bar`.
-# `settings_files` = Load this files in the order.
+# Some sane defaults (and to keep ENV or settings files to a minimum)
+defaults = {
+    "bot_default_start": "21:00",
+    "bot_admin_role": "none",
+    "bot_listen_channel": "are-we-on-tonight",
+    "bot_datastore_channel": "bot-data"
+}
 
-# if __name__ == "__main__":
-#     # if "SHEDBOT_TOKEN" in settings:
-#     #     print(f"{settings.SHEDBOT_TOKEN=}")
-
-#     # if "DYNACONF_TOKEN" in settings:
-#     #     print(f"{settings.DYNACONF_TOKEN=}")
-
-#     print(settings.dynaconf_namespace)
-#     print(settings.env_for_dynaconf)
-#     for k, v in settings.items():
-#         if k.startswith("BOT"):
-#             print(f"{k}: {v}")
+for item, value in defaults.items():
+    if item not in settings:
+        settings[item] = value
