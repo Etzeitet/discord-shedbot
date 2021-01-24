@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from json.decoder import JSONDecodeError
 from typing import Dict, Union
 
@@ -118,6 +119,8 @@ class Schedule(commands.Cog):
         self.settings = settings
         self.default_start = pendulum.parse(self.settings.bot_default_start)
         self.last_day = pendulum.today()
+
+        self.time_pattern = re.compile(r"^\d\d(:?)\d\d$")
 
         # self.guild = None
         # self.datastore_channel = None
@@ -350,16 +353,25 @@ class Schedule(commands.Cog):
         if channel is not None:
             await channel.send(f"Welcome {member.mention}")
 
-    @commands.group(invoke_without_command=True)
+    @commands.group(invoke_without_command=False)
     @is_tonight_channel()
-    async def tonight(self, ctx):
+    async def tonight(self, ctx: commands.Context):
         """
         The tonight command.
 
         If invoked by itself, will show a list of users'
         status for this evening.
         """
-        await ctx.send(self.format_schedule())
+        log.debug(f"tonight: {ctx.invoked_subcommand=}")
+        log.debug(f"tonight: {ctx.subcommand_passed=}")
+
+        if not ctx.invoked_subcommand:
+
+            if ctx.subcommand_passed and self.time_pattern.search(ctx.subcommand_passed):
+                await self.at(ctx, ctx.subcommand_passed)
+
+            else:
+                await ctx.send(self.format_schedule())
 
     @tonight.command(hidden=True)
     # @commands.check_any(is_guild_owner(), has_role(settings.bot_admin_role))
@@ -386,8 +398,11 @@ class Schedule(commands.Cog):
 
     @tonight.command()
     @is_tonight_channel()
-    async def at(self, ctx, time):
-        start_time = pendulum.parse(time, tz="Europe/London")
+    async def at(self, ctx, time: str):
+        if len(time) == 4 and time.isnumeric:
+            time = f"{time[:2]}:{time[-2:]}"
+
+        start_time = pendulum.parse(time)
         member = self.guild.get_member(ctx.author.id)
         await self.update_schedule(member, start_time)
         await ctx.send(
