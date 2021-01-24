@@ -27,6 +27,8 @@ availiability:
         Bob:           ✅ (21:00)
         Charlie:       ❌
 
+    Starting at 21:00
+
 -----
 
 ``/tonight yes``
@@ -50,6 +52,18 @@ Set yourself as available tonight at a particular time.
     /tonight at 20:30
 
     ShedBot: Hi Jim. You've set yourself as on tonight at 20:30 😎
+
+-----
+
+``/tonight [time]``
+
+Set yourself as available tonight at a particular time.
+
+.. code-block::
+
+    /tonight 20:30
+
+    ShedBot: Hi Victoria. You've set yourself as on tonight at 20:30 😎
 
 -----
 
