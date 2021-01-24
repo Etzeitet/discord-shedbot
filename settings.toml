@@ -5,8 +5,6 @@ bot_listen_channel = "are-we-on-tonight"
 
 [production]
 bot_guild = "Etzeitet"
-bot_token = "PRODPRODPROD"
 
 [development]
-bot_token = "DEVDEVDEV"
 bot_guild = "Etzeitet's Test Server"
