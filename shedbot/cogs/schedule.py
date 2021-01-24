@@ -35,7 +35,6 @@ def json_object_hook(o):
         if len(v) > 10:
             try:
                 v = pendulum.parse(v)
-                v.set(tz="Europe/London")
                 log.debug(f"json_object_hook: {v}")
             except pendulum.parsing.exceptions.ParserError as e:
                 log.exception(e)
@@ -62,11 +61,7 @@ def is_guild_owner(**perms):
 
 
 def is_owner_or_admin_role(**perms):
-    if hasattr(settings, "bot_admin_role"):
-        role = settings.bot_admin_role
-    else:
-        role = "none"
-
+    role = settings.bot_admin_role
     original = commands.has_role(role).predicate
 
     async def extended_check(ctx):
@@ -87,7 +82,7 @@ def is_tonight_channel(**perms):
     """
 
     def predicate(ctx):
-        return ctx.channel.name == "are-we-on-tonight"
+        return ctx.channel.name == settings.bot_listen_channel
 
     return commands.check(predicate)
 
@@ -121,11 +116,12 @@ class Schedule(commands.Cog):
         self.schedule: ScheduleDict = {}
 
         self.settings = settings
-        self.last_day = pendulum.now(tz="Europe/London").day
+        self.default_start = pendulum.parse(self.settings.bot_default_start)
+        self.last_day = pendulum.today()
 
-        self.guild = None
-        self.datastore_channel = None
-        self.listen_channel = None
+        # self.guild = None
+        # self.datastore_channel = None
+        # self.listen_channel = None
         self.schedule_manager.start()
 
     @commands.Cog.listener()
@@ -159,12 +155,12 @@ class Schedule(commands.Cog):
         if not self.schedule:
             return "No one appears to be on tonight! :("
 
-        message = "On tonight:\n\n```"
+        message = "\n\n```"
         for member, online in self.schedule.items():
             log.debug(f"{member=}")
 
             if member:
-                name = member.display_name  # getattr(member, "nick", member.name)
+                name = member.display_name
 
                 if isinstance(online, pendulum.DateTime):
                     start_time = online.format("HH:mm")
@@ -175,7 +171,31 @@ class Schedule(commands.Cog):
 
                 message += f"{name+':':<15} {status}\n"
 
+        message = f"{message}\n\nStarting at {self.get_start_time().format('HH:mm')}"
         return f"{message}\n```"
+
+    def get_start_time(self):
+        """
+        Gets the earliest start time all members are available
+        based on their status. If a start time is not set (i.e.,
+        the user didn't use /tonight at <time>)
+
+        Returns
+        =======
+        pendulum.DateTime of earliest suitable start time.
+        """
+        start = pendulum.today()
+        default_start = self.default_start
+
+        for _, status in self.schedule.items():
+            if status not in ["no", "dunno"]:
+                if status == "yes":
+                    status = default_start
+
+                if status > start:
+                    start = status
+
+        return start
 
     def to_json(self, data):
         """
