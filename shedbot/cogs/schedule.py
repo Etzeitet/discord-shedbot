@@ -88,6 +88,20 @@ def is_tonight_channel(**perms):
     return commands.check(predicate)
 
 
+def is_in_listen_channels(**perms):
+    """
+    Command Check for ensuring the bot only responds to commands
+    in the specified channels.
+
+    Used as a decorator for commands.
+    """
+    def predicate(ctx):
+        channels = settings.bot_listen_channel
+        return channels == "ALL" or ctx.channel.name in channels
+
+    return commands.check(predicate)
+
+
 class Schedule(commands.Cog):
     """
     Cog class for Schedule functions of ShedBot.
