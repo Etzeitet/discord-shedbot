@@ -1,7 +1,7 @@
 import json
 import logging
 from json.decoder import JSONDecodeError
-from typing import Dict
+from typing import Dict, Union
 
 import discord
 import pendulum
@@ -12,6 +12,36 @@ from shedbot.config.config import settings
 
 log = logging.getLogger("shedbot.schedule-cog")
 log.setLevel(logging.DEBUG)
+
+ScheduleDict = Dict[discord.Member, Union[str, pendulum.DateTime]]
+
+
+def json_default(o):
+    """
+    Encoder for pendulum DateTime
+    """
+    if isinstance(o, pendulum.DateTime):
+        return str(o)
+    else:
+        return o
+
+
+def json_object_hook(o):
+    """
+    Decoder for pendulum DateTime
+    """
+    d = {}
+    for k, v in o.items():
+        if len(v) > 10:
+            try:
+                v = pendulum.parse(v)
+                log.debug(f"json_object_hook: {v}")
+            except pendulum.parsing.exceptions.ParserError as e:
+                log.exception(e)
+
+        d[k] = v
+
+    return d
 
 
 def is_guild_owner(**perms):
@@ -30,6 +60,18 @@ def is_guild_owner(**perms):
     return commands.check(predicate)
 
 
+def is_owner_or_admin_role(**perms):
+    role = settings.bot_admin_role
+    original = commands.has_role(role).predicate
+
+    async def extended_check(ctx):
+        if ctx.guild is None:
+            return False
+
+        return ctx.guild.owner_id == ctx.author.id or await original(ctx)
+    return commands.check(extended_check)
+
+
 def is_tonight_channel(**perms):
     """
     Command Check for ensuring commands are being run in the
@@ -40,7 +82,7 @@ def is_tonight_channel(**perms):
     """
 
     def predicate(ctx):
-        return ctx.channel.name == "are-we-on-tonight"
+        return ctx.channel.name == settings.bot_listen_channel
 
     return commands.check(predicate)
 
@@ -71,13 +113,15 @@ class Schedule(commands.Cog):
         log.debug("Initialising Schedule Cog")
 
         self.bot = bot
-        self.schedule: Dict[discord.Member, str] = {}
+        self.schedule: ScheduleDict = {}
 
         self.settings = settings
+        self.default_start = pendulum.parse(self.settings.bot_default_start)
+        self.last_day = pendulum.today()
 
-        self.guild = None
-        self.datastore_channel = None
-        self.listen_channel = None
+        # self.guild = None
+        # self.datastore_channel = None
+        # self.listen_channel = None
         self.schedule_manager.start()
 
     @commands.Cog.listener()
@@ -111,16 +155,47 @@ class Schedule(commands.Cog):
         if not self.schedule:
             return "No one appears to be on tonight! :("
 
-        message = "On tonight:\n\n"
+        message = "\n\n```"
         for member, online in self.schedule.items():
             log.debug(f"{member=}")
 
             if member:
-                name = member.display_name  # getattr(member, "nick", member.name)
-                icon = online_icons.get(online, online_icons["dunno"])
-                message += f"{name}: {icon}\n"
+                name = member.display_name
 
-        return message
+                if isinstance(online, pendulum.DateTime):
+                    start_time = online.format("HH:mm")
+                    status = f"{online_icons['yes']} ({start_time})"
+                else:
+                    icon = online_icons.get(online, online_icons["dunno"])
+                    status = icon
+
+                message += f"{name+':':<15} {status}\n"
+
+        message = f"{message}\n\nStarting at {self.get_start_time().format('HH:mm')}"
+        return f"{message}\n```"
+
+    def get_start_time(self):
+        """
+        Gets the earliest start time all members are available
+        based on their status. If a start time is not set (i.e.,
+        the user didn't use /tonight at <time>)
+
+        Returns
+        =======
+        pendulum.DateTime of earliest suitable start time.
+        """
+        start = pendulum.today()
+        default_start = self.default_start
+
+        for _, status in self.schedule.items():
+            if status not in ["no", "dunno"]:
+                if status == "yes":
+                    status = default_start
+
+                if status > start:
+                    start = status
+
+        return start
 
     def to_json(self, data):
         """
@@ -143,7 +218,7 @@ class Schedule(commands.Cog):
         schedule = {k.id: v for k, v in data.items()}
 
         try:
-            text = json.dumps(schedule)
+            text = json.dumps(schedule, default=json_default)
         except (TypeError, OverflowError):
             text = None
 
@@ -171,7 +246,7 @@ class Schedule(commands.Cog):
         log.debug(f"deserialising from JSON: {text}")
 
         try:
-            data = self.hydrate_members(json.loads(text))
+            data = self.hydrate_members(json.loads(text, object_hook=json_object_hook))
         except JSONDecodeError:
             data = None
 
@@ -237,7 +312,9 @@ class Schedule(commands.Cog):
             if data := self.from_json(content):
                 self.schedule = data
 
-    async def update_schedule(self, member: discord.Member, value: str) -> None:
+    async def update_schedule(
+        self, member: discord.Member, value: Union[str, pendulum.DateTime]
+    ) -> None:
         """
         Update the schedule and store in Guild/Server.
 
@@ -247,7 +324,7 @@ class Schedule(commands.Cog):
             Member or User instance, the user to be updated
 
         value:
-            The value to assign to the user. Any str. If
+            The value to assign to the user. Any str or DateTime. If
             value is CLEAR, removes member from schedule.
         """
         log.debug(f"update_schedule: {member.name} set to {value}")
@@ -263,6 +340,7 @@ class Schedule(commands.Cog):
         """
         Clears the schedule and store in Guild/Server.
         """
+        log.info("Clearing schedule")
         self.schedule = {}
         await self.store_schedule()
 
@@ -284,12 +362,15 @@ class Schedule(commands.Cog):
         await ctx.send(self.format_schedule())
 
     @tonight.command(hidden=True)
-    @is_guild_owner()
+    # @commands.check_any(is_guild_owner(), has_role(settings.bot_admin_role))
+    @is_owner_or_admin_role()
+    @is_tonight_channel()
     async def clearall(self, ctx):
         await self.clear_schedule()
         await ctx.send("Schedule has been cleared!")
 
     @tonight.command(aliases=["yep", "y", "ok"])
+    @is_tonight_channel()
     async def yes(self, ctx):
         """
         Sets your status as being online tonight.
@@ -303,7 +384,19 @@ class Schedule(commands.Cog):
             f"Hi {member.display_name}. You've set yourself as on tonight :sunglasses:"
         )
 
+    @tonight.command()
+    @is_tonight_channel()
+    async def at(self, ctx, time):
+        start_time = pendulum.parse(time, tz="Europe/London")
+        member = self.guild.get_member(ctx.author.id)
+        await self.update_schedule(member, start_time)
+        await ctx.send(
+            (f"Hi {member.display_name}. "
+             f"You've set yourself as on tonight at {time} :sunglasses:")
+        )
+
     @tonight.command(aliases=["nope", "n", "nah"])
+    @is_tonight_channel()
     async def no(self, ctx):
         """
         Sets your status as not being online tonight.
@@ -318,6 +411,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["eh", "meh", "maybe"])
+    @is_tonight_channel()
     async def dunno(self, ctx):
         """
         Sets your status as dunno. You are undecided!
@@ -332,6 +426,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["delete", "nuke"])
+    @is_tonight_channel()
     async def clear(self, ctx):
         """
         Clears any status.
@@ -345,13 +440,16 @@ class Schedule(commands.Cog):
     @tasks.loop(seconds=60)
     async def schedule_manager(self):
         now = pendulum.now(tz="Europe/London")
-        clear_time = pendulum.today(tz="Europe/London").end_of("day")
 
-        if now > clear_time:
-            print("schedule_manager: end of day clearing")
+        log.debug(f"now: {now}")
+        log.debug(f"clear: {self.last_day}")
+
+        if now.day != self.last_day:
+            log.info("schedule_manager: end of day clearing")
             await self.clear_schedule()
-
-        print("schedule_manager: nothing to do")
+            self.last_day = now.day
+        else:
+            log.info("schedule_manager: nothing to do")
 
     @schedule_manager.before_loop
     async def before_printer(self):
