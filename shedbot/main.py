@@ -9,7 +9,7 @@ logging.basicConfig()
 log = logging.getLogger("shedbot.main")
 log.setLevel(logging.DEBUG)
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 intents = discord.Intents.default()
 intents.members = True  # must also be enabled in Dev Portal
