@@ -23,9 +23,9 @@ availiability:
 
     ShedBot: On tonight:
 
-        Alice: ✅
-        Bob: ✅
-        Charlie: ❌
+        Alice:         ✅
+        Bob:           ✅ (21:00)
+        Charlie:       ❌
 
 -----
 
@@ -38,6 +38,18 @@ Set yourself as available tonight.
     /tonight yes
 
     ShedBot: Hi Alice. You've set yourself as on tonight 😎
+
+-----
+
+``/tonight at [time]``
+
+Set yourself as available tonight at a particular time.
+
+.. code-block::
+
+    /tonight at 20:30
+
+    ShedBot: Hi Jim. You've set yourself as on tonight at 20:30 😎
 
 -----
 
