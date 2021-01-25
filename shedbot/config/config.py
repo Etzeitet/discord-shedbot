@@ -10,7 +10,7 @@ settings = Dynaconf(
 defaults = {
     "bot_default_start": "21:00",
     "bot_admin_role": "none",
-    "bot_listen_channel": "are-we-on-tonight",
+    "bot_listen_channel": "ALL",
     "bot_datastore_channel": "bot-data"
 }
 
