@@ -29,6 +29,8 @@ availiability:
 
     Starting at 21:00
 
+``/to`` is an alias for this command.
+
 -----
 
 ``/tonight yes``
@@ -177,12 +179,12 @@ or a list:
     bot_listen_channel = "general"
 
     # multiple channels
-    bot_listen_channel = "['general', 'news']"
+    bot_listen_channel = ["general", "news"]
 
 Leaving this option empty/unset or set to ``ALL`` will cause the bot to listen to all
 channels it has access to.
 
-Accepts single value (``my_channel``, ``ALL``, etc) or a list (``"['my_channel', 'another_channel']"``)
+Accepts single value (``my_channel``, ``ALL``, etc) or a list (``["my_channel", "another_channel"]``)
 
 This is the channel(s) where the bot will listen for commands. If set to ``ALL``
 the bot will respond to commands in all channels it can access in your Guild.
