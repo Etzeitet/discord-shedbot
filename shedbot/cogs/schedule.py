@@ -368,7 +368,7 @@ class Schedule(commands.Cog):
         if channel is not None:
             await channel.send(f"Welcome {member.mention}")
 
-    @commands.group(invoke_without_command=False)
+    @commands.group(invoke_without_command=False, aliases=["to"])
     @is_in_listen_channels()
     async def tonight(self, ctx: commands.Context):
         """
