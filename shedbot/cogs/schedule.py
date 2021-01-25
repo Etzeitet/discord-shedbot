@@ -136,15 +136,16 @@ class Schedule(commands.Cog):
 
         self.time_pattern = re.compile(r"^\d\d(:?)\d\d$")
 
-        # self.guild = None
-        # self.datastore_channel = None
-        # self.listen_channel = None
+        self.guild: discord.Guild = None
+        self.datastore_channel = None
+        self.listen_channel = None
         self.schedule_manager.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
         log.debug("on_ready event")
-
+        log.debug(f"{self.bot.guilds[0].name}")
+        log.debug(f"{self.settings.bot_guild}")
         self.guild = discord.utils.get(self.bot.guilds, name=self.settings.bot_guild)
         self.datastore_channel = discord.utils.get(
             self.guild.channels, name=self.settings.bot_datastore_channel
@@ -368,7 +369,7 @@ class Schedule(commands.Cog):
             await channel.send(f"Welcome {member.mention}")
 
     @commands.group(invoke_without_command=False)
-    @is_tonight_channel()
+    @is_in_listen_channels()
     async def tonight(self, ctx: commands.Context):
         """
         The tonight command.
@@ -388,15 +389,14 @@ class Schedule(commands.Cog):
                 await ctx.send(self.format_schedule())
 
     @tonight.command(hidden=True)
-    # @commands.check_any(is_guild_owner(), has_role(settings.bot_admin_role))
     @is_owner_or_admin_role()
-    @is_tonight_channel()
+    @is_in_listen_channels()
     async def clearall(self, ctx):
         await self.clear_schedule()
         await ctx.send("Schedule has been cleared!")
 
     @tonight.command(aliases=["yep", "y", "ok"])
-    @is_tonight_channel()
+    @is_in_listen_channels()
     async def yes(self, ctx):
         """
         Sets your status as being online tonight.
@@ -411,7 +411,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command()
-    @is_tonight_channel()
+    @is_in_listen_channels()
     async def at(self, ctx, time: str):
         if len(time) == 4 and time.isnumeric:
             time = f"{time[:2]}:{time[-2:]}"
@@ -425,7 +425,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["nope", "n", "nah"])
-    @is_tonight_channel()
+    @is_in_listen_channels()
     async def no(self, ctx):
         """
         Sets your status as not being online tonight.
@@ -440,7 +440,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["eh", "meh", "maybe"])
-    @is_tonight_channel()
+    @is_in_listen_channels()
     async def dunno(self, ctx):
         """
         Sets your status as dunno. You are undecided!
@@ -455,7 +455,7 @@ class Schedule(commands.Cog):
         )
 
     @tonight.command(aliases=["delete", "nuke"])
-    @is_tonight_channel()
+    @is_in_listen_channels()
     async def clear(self, ctx):
         """
         Clears any status.
