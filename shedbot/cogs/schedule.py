@@ -168,7 +168,7 @@ class Schedule(commands.Cog):
         This function will use the user's Nickname if set, otherwise
         just their name.
         """
-        online_icons = {"yes": "✅", "no": "❌", "dunno": "❔"}
+        online_icons = {"yes": ":white_check_mark:", "no": ":x:", "dunno": ":question:"}
 
         if not self.schedule:
             return "No one appears to be on tonight! :("
