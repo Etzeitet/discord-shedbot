@@ -9,7 +9,7 @@ logging.basicConfig()
 log = logging.getLogger("shedbot.main")
 log.setLevel(logging.DEBUG)
 
-VERSION = "0.5.2"
+VERSION = "0.6.0"
 
 intents = discord.Intents.default()
 intents.members = True  # must also be enabled in Dev Portal
@@ -31,6 +31,7 @@ def main():
 @bot.event
 async def on_ready():
     print("Bot is ready")
+
 
 if __name__ == "__main__":
     main()
