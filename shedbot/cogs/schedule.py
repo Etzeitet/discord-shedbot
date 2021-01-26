@@ -6,9 +6,9 @@ from typing import Dict, Union
 
 import discord
 import pendulum
-from pendulum import Date, Time, DateTime, Duration
 from discord.ext import commands, tasks
 from dynaconf import LazySettings
+from pendulum import Date, DateTime, Duration, Time
 
 from shedbot.config.config import settings
 
@@ -72,6 +72,7 @@ def is_owner_or_admin_role(**perms):
             return False
 
         return ctx.guild.owner_id == ctx.author.id or await original(ctx)
+
     return commands.check(extended_check)
 
 
@@ -97,6 +98,7 @@ def is_in_listen_channels(**perms):
 
     Used as a decorator for commands.
     """
+
     def predicate(ctx):
         channels = settings.bot_listen_channel
         return channels == "ALL" or ctx.channel.name in channels
@@ -196,7 +198,7 @@ class Schedule(commands.Cog):
         if members_online >= 2:
             start_status = f"Starting at {self.get_start_time().format('HH:mm')}"
         else:
-            start_status = f"Sorry, looks like you're on your own tonight! 💩"
+            start_status = "Sorry, looks like you're on your own tonight! 💩"
 
         message = f"{message}\n\n{start_status}"
         return f"{message}\n```"
@@ -391,7 +393,9 @@ class Schedule(commands.Cog):
 
         if not ctx.invoked_subcommand:
 
-            if ctx.subcommand_passed and self.time_pattern.search(ctx.subcommand_passed):
+            if ctx.subcommand_passed and self.time_pattern.search(
+                ctx.subcommand_passed
+            ):
                 await self.at(ctx, ctx.subcommand_passed)
 
             else:
@@ -427,8 +431,10 @@ class Schedule(commands.Cog):
         member = self.guild.get_member(ctx.author.id)
         await self.update_schedule(member, start_time)
         await ctx.send(
-            (f"Hi {member.display_name}. "
-             f"You've set yourself as on tonight at {time} :sunglasses:")
+            (
+                f"Hi {member.display_name}. "
+                f"You've set yourself as on tonight at {time} :sunglasses:"
+            )
         )
 
     @tonight.command(aliases=["nope", "n", "nah"])
