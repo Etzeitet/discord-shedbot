@@ -6,6 +6,7 @@ from typing import Dict, Union
 
 import discord
 import pendulum
+from pendulum import Date, Time, DateTime, Duration
 from discord.ext import commands, tasks
 from dynaconf import LazySettings
 
@@ -14,14 +15,15 @@ from shedbot.config.config import settings
 log = logging.getLogger("shedbot.schedule-cog")
 log.setLevel(logging.DEBUG)
 
-ScheduleDict = Dict[discord.Member, Union[str, pendulum.DateTime]]
+PendulumObject = Union[Date, Time, DateTime, Duration]
+ScheduleDict = Dict[discord.Member, Union[str, PendulumObject]]
 
 
 def json_default(o):
     """
     Encoder for pendulum DateTime
     """
-    if isinstance(o, pendulum.DateTime):
+    if isinstance(o, DateTime):
         return str(o)
     else:
         return o
@@ -169,6 +171,7 @@ class Schedule(commands.Cog):
         just their name.
         """
         online_icons = {"yes": "✅", "no": "❌", "dunno": "❓"}
+        members_online = 0
 
         if not self.schedule:
             return "No one appears to be on tonight! :("
@@ -183,13 +186,19 @@ class Schedule(commands.Cog):
                 if isinstance(online, pendulum.DateTime):
                     start_time = online.format("HH:mm")
                     status = f"{online_icons['yes']} ({start_time})"
+                    members_online += 1
                 else:
                     icon = online_icons.get(online, online_icons["dunno"])
                     status = icon
 
                 message += f"{name+':':<15} {status}\n"
 
-        message = f"{message}\n\nStarting at {self.get_start_time().format('HH:mm')}"
+        if members_online >= 2:
+            start_status = f"Starting at {self.get_start_time().format('HH:mm')}"
+        else:
+            start_status = f"Sorry, looks like you're on your own tonight! 💩"
+
+        message = f"{message}\n\n{start_status}"
         return f"{message}\n```"
 
     def get_start_time(self):
@@ -331,7 +340,7 @@ class Schedule(commands.Cog):
                 self.schedule = data
 
     async def update_schedule(
-        self, member: discord.Member, value: Union[str, pendulum.DateTime]
+        self, member: discord.Member, value: Union[str, PendulumObject]
     ) -> None:
         """
         Update the schedule and store in Guild/Server.
@@ -402,13 +411,11 @@ class Schedule(commands.Cog):
         Sets your status as being online tonight.
 
         Updates the schedule for invoking member to say they
-        are available.
+        are available. This is just a convenience function for
+        at(). It sets the start time to the default value in
+        the config.
         """
-        member = self.guild.get_member(ctx.author.id)
-        await self.update_schedule(member, "yes")
-        await ctx.send(
-            f"Hi {member.display_name}. You've set yourself as on tonight :sunglasses:"
-        )
+        await self.at(ctx, self.settings.bot_default_start)
 
     @tonight.command()
     @is_in_listen_channels()
