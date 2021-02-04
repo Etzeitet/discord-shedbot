@@ -5,10 +5,10 @@ from json.decoder import JSONDecodeError
 from typing import Dict, Union
 
 import discord
-import pendulum
 from discord.ext import commands, tasks
 from dynaconf import LazySettings
-from pendulum import Date, DateTime, Duration, Time
+from pendulum import Date, DateTime, Duration, Time, now, parse, today
+from pendulum.parsing.exceptions import ParserError
 
 from shedbot.config.config import settings
 
@@ -37,9 +37,9 @@ def json_object_hook(o):
     for k, v in o.items():
         if len(v) > 10:
             try:
-                v = pendulum.parse(v)
+                v = parse(v)
                 log.debug(f"json_object_hook: {v}")
-            except pendulum.parsing.exceptions.ParserError as e:
+            except ParserError as e:
                 log.exception(e)
 
         d[k] = v
@@ -135,8 +135,8 @@ class Schedule(commands.Cog):
         self.schedule: ScheduleDict = {}
 
         self.settings = settings
-        self.default_start = pendulum.parse(self.settings.bot_default_start)
-        self.last_day = pendulum.today()
+        self.default_start = parse(self.settings.bot_default_start)
+        self.last_day = today()
 
         self.time_pattern = re.compile(r"^\d\d(:?)\d\d$")
 
@@ -185,7 +185,7 @@ class Schedule(commands.Cog):
             if member:
                 name = member.display_name
 
-                if isinstance(online, pendulum.DateTime):
+                if isinstance(online, DateTime):
                     start_time = online.format("HH:mm")
                     status = f"{online_icons['yes']} ({start_time})"
                     members_online += 1
@@ -213,7 +213,7 @@ class Schedule(commands.Cog):
         =======
         pendulum.DateTime of earliest suitable start time.
         """
-        start = pendulum.today()
+        start = today()
         default_start = self.default_start
 
         for _, status in self.schedule.items():
@@ -427,7 +427,7 @@ class Schedule(commands.Cog):
         if len(time) == 4 and time.isnumeric:
             time = f"{time[:2]}:{time[-2:]}"
 
-        start_time = pendulum.parse(time)
+        start_time = parse(time)
         member = self.guild.get_member(ctx.author.id)
         await self.update_schedule(member, start_time)
         await ctx.send(
@@ -481,15 +481,15 @@ class Schedule(commands.Cog):
 
     @tasks.loop(seconds=60)
     async def schedule_manager(self):
-        now = pendulum.now(tz="Europe/London")
+        _now = now(tz="Europe/London")
 
-        log.debug(f"now: {now}")
+        log.debug(f"now: {_now}")
         log.debug(f"clear: {self.last_day}")
 
-        if now.day != self.last_day:
+        if _now.day != self.last_day:
             log.info("schedule_manager: end of day clearing")
             await self.clear_schedule()
-            self.last_day = now.day
+            self.last_day = _now.day
         else:
             log.info("schedule_manager: nothing to do")
 
