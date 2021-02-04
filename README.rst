@@ -2,6 +2,9 @@
 Discord Shed Bot
 ################
 
+.. image:: https://img.shields.io/lgtm/grade/python/g/Etzeitet/discord-shedbot.svg?logo=lgtm&logoWidth=18
+    :target: https://lgtm.com/projects/g/Etzeitet/discord-shedbot/context:python
+
 The Shed Bot is a simple Discord Bot for managing user's availability for an
 activity. Designed originall for allowing a group of friends to work out
 who was available for online gaming.
