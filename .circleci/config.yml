@@ -28,7 +28,7 @@ jobs:
 workflows:
   main:
     jobs:
-      - build
+      - build:
         filters:
           tags:
             only: /v\d+\.\d+\.\d+
