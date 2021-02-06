@@ -33,4 +33,4 @@ workflows:
           tags:
             only: /v\d+\.\d+\.\d+
           branches:
-            only: main
+            ignore: /.*/
