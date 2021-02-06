@@ -22,7 +22,7 @@ jobs:
       - run: |
           IMAGE_NAME=$DOCKER_HUB_USER/$DOCKER_REPO:$CIRCLE_TAG
           docker build -t $IMAGE_NAME .
-          echo $DOCKER_HUB_PASS | docker login -u $DOCKER_HUB_USER --password-stdin
+          echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
           docker push $IMAGE_NAME
 
 workflows:
