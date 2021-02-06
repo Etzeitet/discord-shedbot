@@ -7,6 +7,9 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.9
+      
+    environment:
+      DOCKER_REPO: shedbot
     
     steps:
       - checkout
@@ -17,18 +20,10 @@ jobs:
 
       # build and push Docker image
       - run: |
-          TAG=0.1.$CIRCLE_BUILD_NUM
-          docker build -t CircleCI-Public/circleci-demo-docker:$TAG .
-          echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-          docker push CircleCI-Public/circleci-demo-docker:$TAG
-
-      - checkout
-      - python/load-cache
-      - python/install-deps
-      - python/save-cache
-      - run:
-          command: ./manage.py test
-          name: Test
+          IMAGE_NAME=$DOCKER_HUB_USER/$DOCKER_REPO:$CIRCLE_TAG
+          docker build -t $IMAGE_NAME .
+          echo $DOCKER_HUB_PASS | docker login -u $DOCKER_HUB_USER --password-stdin
+          docker push $IMAGE_NAME
 
 workflows:
   main:
