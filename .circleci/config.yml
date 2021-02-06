@@ -1,0 +1,31 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@0.2.1
+
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.9
+      
+    environment:
+      DOCKER_REPO: shedbot
+    
+    steps:
+      - checkout
+
+      - setup_remote_docker:
+          version: 19.03.13
+          docker_layer_caching: false
+
+      # build and push Docker image
+      - run: |
+          IMAGE_NAME=$DOCKER_HUB_USER/$DOCKER_REPO:$CIRCLE_TAG
+          docker build -t $IMAGE_NAME .
+          echo $DOCKER_HUB_PASS | docker login -u $DOCKER_HUB_USER --password-stdin
+          docker push $IMAGE_NAME
+
+workflows:
+  main:
+    jobs:
+      - build
