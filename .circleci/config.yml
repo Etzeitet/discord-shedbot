@@ -7,10 +7,10 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.9
-      
+
     environment:
       DOCKER_REPO: shedbot
-    
+
     steps:
       - checkout
 
@@ -29,3 +29,7 @@ workflows:
   main:
     jobs:
       - build
+        filters:
+          branches:
+            only:
+              - main
