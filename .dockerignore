@@ -1,4 +1,6 @@
-**/__pycache__/
-.mypy_cache/
-.vscode/
-*.egg-info
+**
+
+!shedbot/
+!requirements.txt
+!settings.toml.example
+!setup.py
