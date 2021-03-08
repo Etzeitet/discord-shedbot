@@ -9,7 +9,7 @@ logging.basicConfig()
 log = logging.getLogger("shedbot.main")
 log.setLevel(logging.DEBUG)
 
-VERSION = "0.7.3"
+VERSION = "0.9.0"
 
 intents = discord.Intents.default()
 intents.members = True  # must also be enabled in Dev Portal
@@ -25,6 +25,7 @@ def main():
     for extension in initial_extensions:
         bot.load_extension(extension)
 
+    print(settings.bot_token)
     bot.run(settings.bot_token)
 
 
